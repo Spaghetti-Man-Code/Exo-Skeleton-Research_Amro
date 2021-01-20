@@ -90,7 +90,7 @@ int main()
 
     while(true){
         int i = 0;
-        ReadFile(hSerial, &reading_buffer, 1, &bytes_read, NULL);
+        ReadFile(hSerial, &reading_buffer[i], 1, &bytes_read, NULL);
         
         while (bytes_read > 0) {
             i++;
