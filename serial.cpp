@@ -17,7 +17,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdint.h>
-
+#include <time.h>
  
 int main()
 {
@@ -60,11 +60,11 @@ int main()
     }
  
     // Set COM port timeout settings
-    timeouts.ReadIntervalTimeout = 50;
-    timeouts.ReadTotalTimeoutConstant = 50;
+    timeouts.ReadIntervalTimeout = 10;
+    timeouts.ReadTotalTimeoutConstant = 10;
     timeouts.ReadTotalTimeoutMultiplier = 10;
-    //timeouts.WriteIntervalTimeout = 50;
-    timeouts.WriteTotalTimeoutConstant = 50;
+    
+    timeouts.WriteTotalTimeoutConstant = 10;
     timeouts.WriteTotalTimeoutMultiplier = 10;
     if(SetCommTimeouts(hSerial, &timeouts) == 0){
         fprintf(stderr, "Error setting timeouts\n");
@@ -91,6 +91,7 @@ int main()
     char * write_buffer = "start\n";
     DWORD bytes_written = 0;
     int start = 0;
+    clock_t start1 = 0, start2 = 0, end1 = 0, end2 = 0;
 
 
 
@@ -99,23 +100,31 @@ int main()
         
         if(start == 0){
             WriteFile(hSerial, write_buffer, 6, &bytes_written, NULL);
-            
+
             // start timer here after sending the last byte
+            clock_t start1 = clock();
+
             printf("Number of bytes written: %d\n", bytes_written);
             start = 1;
 
         }
 
         ReadFile(hSerial, &reading_buffer[i], 1, &bytes_read, NULL);
-        while (bytes_read > 0) {
-
+        if(bytes_read > 0){
             // stop timer here after recieving the first byte
+            clock_t end1 = clock();
 
+            // start clock to see how long it takes for all the data to send
+            clock_t start2 = clock();
+        }
+        while (bytes_read > 0){
             i++;
             ReadFile(hSerial, &reading_buffer[i], 1, &bytes_read, NULL);
         }
 
         if(i > 0){
+            clock_t end2 = clock();
+
             memcpy(&data_length, &reading_buffer[0], 1 * 1 * sizeof(char));
             memcpy(&time, &reading_buffer[1], 4 * 1 * sizeof(char));
             memcpy(IMU_data, &reading_buffer[5], 2 * 49 * sizeof(char));
@@ -125,6 +134,12 @@ int main()
             memcpy(teensy_data, &reading_buffer[113], 2 * 49 * sizeof(char));
             
             // printing data
+            float seconds1 = (float)(((float)((float)(end1 - start1) * (1000)))/ CLOCKS_PER_SEC);
+            float seconds2 = (float)(((float)((float)(end2 - start2) * (1000)))/ CLOCKS_PER_SEC);
+            
+            printf("time it took to send to read 1 byte: %f milliseconds\n", seconds1);
+            printf("time it took to recieve rst of data from Pi: %f milliseconds\n", seconds2);
+
             printf("\ndata length: %d\n", data_length);
             printf("time: %d\n", time);
         
@@ -156,8 +171,8 @@ int main()
             }printf("\n");
 
         }            
-    }
 
+    }
 
     printf("stage 4...\n");
     // Close serial port
